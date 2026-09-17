@@ -1,4 +1,5 @@
 from setuptools import find_packages, setup
+from glob import glob
 
 package_name = 'perception_package'
 
@@ -10,6 +11,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/models', glob('models/*.pt')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,6 +26,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'camera_node = perception_package.camera_node:main',
         ],
     },
 )
