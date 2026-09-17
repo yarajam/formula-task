@@ -45,15 +45,56 @@ frame transformations.
 class LidarNode(Node):
     def __init__(self):
         super().__init__('lidar_node')
-        self.target_frame = 'base_footprint'
+        # self.target_frame = 'base_footprint'
         self.frame_logged = False #do i know the frame of the incoming point cloud? if not, log it once and then set this to True
         self.transform_logged = False #do i know the transform i need from the source frame to the target frame? if not, log it once and then set this to True
-        self.points_logged = False
+        # self.points_logged = False
         
-        self.cluster_distance_threshold = 4
-        self.cluster_min_points = 2
+        # self.cluster_distance_threshold = 0.4
+        # self.cluster_min_points = 2
 
         self.tf_buffer = Buffer() # this is to store the transforms that we will get from the TransformListener
+        
+        self.declare_parameter('target_frame', 'base_footprint')
+
+        self.declare_parameter('roi_x_min', 0.0)
+        self.declare_parameter('roi_x_max', 25.0)
+
+        self.declare_parameter('roi_y_min', -8.0)
+        self.declare_parameter('roi_y_max', 8.0)
+
+        self.declare_parameter('roi_z_min', -0.2)
+        self.declare_parameter('roi_z_max', 1.5)
+
+        self.declare_parameter('ground_threshold', 0.01)
+
+        self.declare_parameter('cluster_distance_threshold', 0.30)
+        self.declare_parameter('cluster_min_points', 2)
+        
+        self.target_frame = self.get_parameter('target_frame').value
+
+        self.roi_x_min = self.get_parameter('roi_x_min').value
+        self.roi_x_max = self.get_parameter('roi_x_max').value
+
+        self.roi_y_min = self.get_parameter('roi_y_min').value
+        self.roi_y_max = self.get_parameter('roi_y_max').value
+
+        self.roi_z_min = self.get_parameter('roi_z_min').value
+        self.roi_z_max = self.get_parameter('roi_z_max').value
+
+        self.ground_threshold = self.get_parameter(
+            'ground_threshold'
+        ).value
+
+        self.cluster_distance_threshold = self.get_parameter(
+            'cluster_distance_threshold'
+        ).value
+
+        self.cluster_min_points = self.get_parameter(
+            'cluster_min_points'
+        ).value
+        
+        
         self.subscription = self.create_subscription(
             PointCloud2,
             '/velodyne_points',
@@ -141,12 +182,12 @@ class LidarNode(Node):
         roi_xyz, roi_intensity = extract_roi(
             xyz_base,
             intensity,
-            0.0,    # x_min
-            25.0,   # x_max
-            -8.0,   # y_min
-            8.0,    # y_max
-            -0.2,   # z_min
-            1.5     # z_max
+            self.roi_x_min,
+            self.roi_x_max,
+            self.roi_y_min,
+            self.roi_y_max,
+            self.roi_z_min,
+            self.roi_z_max
         )
         
         # if not self.points_logged:
@@ -209,7 +250,7 @@ class LidarNode(Node):
         non_ground_xyz, non_ground_intensity = remove_ground(
             roi_xyz,
             roi_intensity,
-            ground_threshold=0.01
+            ground_threshold=self.ground_threshold
         )
         
         # self.get_logger().info(
@@ -234,16 +275,16 @@ class LidarNode(Node):
             self.cluster_min_points
         )
         
-        valid_labels = cluster_labels[cluster_labels >= 0]
+        # valid_labels = cluster_labels[cluster_labels >= 0]
 
-        if len(valid_labels) > 0:
-            number_of_clusters = len(np.unique(valid_labels))
-        else:
-            number_of_clusters = 0
+        # if len(valid_labels) > 0:
+        #     number_of_clusters = len(np.unique(valid_labels))
+        # else:
+        #     number_of_clusters = 0
 
-        self.get_logger().info(
-            f'Clusters found: {number_of_clusters}'
-        )
+        # self.get_logger().info(
+        #     f'Clusters found: {number_of_clusters}'
+        # )
         valid_cluster_mask = cluster_labels >= 0
 
         clustered_xyz = non_ground_xyz[valid_cluster_mask]
