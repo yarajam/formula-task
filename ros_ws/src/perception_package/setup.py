@@ -28,6 +28,7 @@ setup(
         'console_scripts': [
             'camera_node = perception_package.camera_node:main',
             'visualization_node = perception_package.visualization_node:main',
+            'lidar_node = perception_package.lidar_node:main',
         ],
     },
 )
