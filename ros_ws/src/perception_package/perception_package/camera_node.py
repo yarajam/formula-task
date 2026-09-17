@@ -8,11 +8,8 @@ from ultralytics import YOLO
 from ament_index_python.packages import get_package_share_directory
 from pathlib import Path
 
-from vision_msgs.msg import (
-    Detection2DArray,
-    Detection2D,
-    ObjectHypothesisWithPose,
-)
+from custom_interfaces.msg import BoundingBox, BoundingBoxArray
+
 """
 Node: Camera Perception
 
@@ -41,19 +38,20 @@ class CameraNode(Node):
             10
         )
         self.detections_publisher = self.create_publisher(
-            Detection2DArray,
+            BoundingBoxArray,
             '/perception/yolo_bboxes',
             10
         )
 
-        self.get_logger().info('Camera node started')
+        self.get_logger().info('Camera node started....')
 
     def image_callback(self, msg):
         cv_image = self.bridge.imgmsg_to_cv2(
             msg,
             desired_encoding='bgr8'
         )
-        detections_msg = Detection2DArray()
+
+        detections_msg = BoundingBoxArray()
         detections_msg.header = msg.header
 
         results = self.model(cv_image, verbose=False)
@@ -65,27 +63,21 @@ class CameraNode(Node):
                 class_name = self.model.names[class_id]
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
                 
-                detection = Detection2D()
-                detection.header = msg.header
-
-                detection.bbox.center.position.x = (x1 + x2) / 2.0
-                detection.bbox.center.position.y = (y1 + y2) / 2.0
-                detection.bbox.size_x = x2 - x1
-                detection.bbox.size_y = y2 - y1
-
-                hypothesis = ObjectHypothesisWithPose()
-                hypothesis.hypothesis.class_id = class_name
-                hypothesis.hypothesis.score = confidence
-
-                detection.results.append(hypothesis)
-
-                detections_msg.detections.append(detection)
+                detection = BoundingBox()
+                detection.class_id = class_id
+                detection.confidence = confidence
+                detection.x1 = x1
+                detection.y1 = y1
+                detection.x2 = x2
+                detection.y2 = y2
+                detections_msg.boxes.append(detection)
 
                 # self.get_logger().info(
                 #     f'Detected: {class_name}, '
                 #     f'confidence: {confidence:.2f}, '
                 #     f'box: ({x1:.0f}, {y1:.0f}) -> ({x2:.0f}, {y2:.0f})'
                 # )
+            
         self.detections_publisher.publish(detections_msg)
 def main(args=None):
     rclpy.init(args=args)
